@@ -88,5 +88,59 @@ def local_optimization(xp, q0, delta, Nd = 10):
         qsol.append(qmin)
         
     return qsol, xsol
+
+def trajectory_shortening(xp, qp, delta, zeta=0.001, angle_max=0.5):
+    # check xp shape and length
+    if xp.shape[1] != 2:
+        raise ValueError("Input path must have shape 2 x N")       
+    Np = xp.shape[0]
+    
+    qsol = [qp[0]]
+    xsol = [xp[0]]
+    
+    for i in range(1, Np-1):
+        # save current piont
+        qi = qp[i]
+        xi = xp[i]
+        
+        # create joint space vectors
+        v1 = qp[i-1] - qp[i]
+        v2 = qp[i+1] - qp[i]
+        nv1 = norm(v1)
+        nv2 = norm(v2)
+        
+        # vector must have minimum length to allow for sufficient shortening
+        if (nv1 < zeta) or (nv2 < zeta):
+            qsol.append(qi)
+            xsol.append(xi)
+            continue
+        
+        # If angle is big, not much shortening can be done
+        angle12 = abs(angle(v1, v2, nv1, nv2))
+        print angle12
+        if (angle12 > angle_max):
+            qsol.append(qi)
+            xsol.append(xi)
+            continue
+            
+        # if we get to this part of the loop, we should try to shorten the trajectory
+        # from (i-1) to (i+1) by replacing qi
+        w = np.linspace(0.1, 4.0, 10) # try different weights
+        for wi in w:
+            qmc = mass_center(qp[i-1], qp[i], qp[i+1], wi)
+            xmc = fk(qmc)
+            if dist(xp[i], xp[i+1], xmc) < delta:
+                print "point replaced in iteration " + str(i)
+                # this is a good replacement point!
+                qi = qmc
+                xi = xmc
+                break
+            
+        qsol.append(qi)
+        xsol.append(xi)
+    
+    qsol.append(qp[-1])
+    xsol.append(xp[-1])
+    return qsol, xsol
         
     

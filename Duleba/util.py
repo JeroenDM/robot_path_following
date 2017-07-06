@@ -1,5 +1,5 @@
 from numpy.linalg import norm, pinv
-from numpy import cos, sin, array, pi
+from numpy import cos, sin, array, pi, dot, cross, arctan2
 from scipy.optimize import root
 import matplotlib.pyplot as plt
 
@@ -44,14 +44,16 @@ def rrplot(q):
     
 def dist(p1, p2, a):
     d = norm(p1 - p2)
-    if d <= 1e-6:
-        raise ValueError("Line must be given by two different points")
+    if d <= 1e-12:
+        raise ValueError("Line must be given by two different points, d= " + str(d))
     A = abs( (p2[1] - p1[1]) * a[0] - (p2[0] - p1[0]) * a[1] + p2[0] * p1[1] - p2[1] * p1[0] )
     return A / d
 
 def mid_point(qv, xv, i):
     q_mid = (qv[i] + qv[i+1]) / 2
     x_mid = fk(q_mid)
+    print i
+    print xv
     e = dist(xv[i], xv[i+1], x_mid)
     return q_mid, x_mid, e
 
@@ -67,7 +69,16 @@ def refine_grid(xsol, qsol, i):
     q_new = sol['x']
     
     return x_new, q_new
-  
+
+def angle(a, b, na, nb):
+    """ At this point it is checked that the norm is not close to zeros"""
+    cos_angle = dot(a, b) / (na * nb)
+    sin_angle = cross(a, b) / (na * nb)
+    
+    return arctan2(sin_angle, cos_angle)
+
+def mass_center(q1, q2, q3, w):
+    return (q1 + w * q2 + q3) / (2.0 + w)
   
 
 def newton(x, q0, alpha = 0.1, max_it = 1000, tol = 1e-6):
